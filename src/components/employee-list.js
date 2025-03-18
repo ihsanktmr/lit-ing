@@ -97,25 +97,30 @@ class EmployeeList extends LitElement {
   connectedCallback() {
     super.connectedCallback();
     this.updateLanguage();
-    this.employees = store.employees; // Ensure we have the latest data
-    this.requestUpdate();
 
-    // Listen for store updates
-    window.addEventListener("store-updated", () => {
-      this.employees = store.employees;
+    // Bind event handlers to this instance
+    this._handleStoreUpdate = () => {
+      this.employees = [...store.employees];
       this.requestUpdate();
-    });
+    };
 
-    window.addEventListener("language-changed", (e) => {
+    this._handleLanguageChange = (e) => {
       this.language = e.detail.language;
       this.requestUpdate();
-    });
+    };
+
+    // Add event listeners
+    window.addEventListener("store-updated", this._handleStoreUpdate);
+    window.addEventListener("language-changed", this._handleLanguageChange);
+
+    // Initialize employees from store
+    this.employees = [...store.employees];
   }
 
   disconnectedCallback() {
     super.disconnectedCallback();
-    window.removeEventListener("language-changed");
-    window.removeEventListener("store-updated");
+    window.removeEventListener("store-updated", this._handleStoreUpdate);
+    window.removeEventListener("language-changed", this._handleLanguageChange);
   }
 
   updateLanguage() {
@@ -295,7 +300,7 @@ class EmployeeList extends LitElement {
                             "Edit button clicked for employee:",
                             emp.id
                           );
-                          window.location.href = `/edit?id=${emp.id}`;
+                          router.go(`/edit?id=${emp.id}`);
                         }}"
                       >
                         ${t.edit}
@@ -328,7 +333,7 @@ class EmployeeList extends LitElement {
                           "Edit button clicked for employee:",
                           emp.id
                         );
-                        window.location.href = `/edit?id=${emp.id}`;
+                        router.go(`/edit?id=${emp.id}`);
                       }}"
                     >
                       ${t.edit}

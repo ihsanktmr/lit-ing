@@ -86,26 +86,13 @@ class EmployeeForm extends LitElement {
     super.connectedCallback();
     this.updateLanguage();
 
-    // Check if this is an edit mode
-    const urlParams = new URLSearchParams(window.location.search);
-    this.employeeId = urlParams.get("id");
-    console.log("Form initialized with employeeId:", this.employeeId);
-    console.log("Current URL:", window.location.href);
-    console.log("Current search params:", window.location.search);
-
-    if (this.employeeId) {
-      console.log("Loading employee with ID:", this.employeeId);
-      this.loadEmployee();
-    }
-
-    // Listen for language changes
-    window.addEventListener("language-changed", (e) => {
+    // Bind event handlers to this instance
+    this._handleLanguageChange = (e) => {
       this.language = e.detail.language;
       this.requestUpdate();
-    });
+    };
 
-    // Listen for route changes
-    window.addEventListener("vaadin-router-location-changed", (e) => {
+    this._handleRouteChange = (e) => {
       console.log("Route changed:", e.detail.location);
       const newParams = new URLSearchParams(window.location.search);
       const newId = newParams.get("id");
@@ -134,13 +121,35 @@ class EmployeeForm extends LitElement {
           this.requestUpdate();
         }
       }
-    });
+    };
+
+    // Add event listeners
+    window.addEventListener("language-changed", this._handleLanguageChange);
+    window.addEventListener(
+      "vaadin-router-location-changed",
+      this._handleRouteChange
+    );
+
+    // Check if this is an edit mode
+    const urlParams = new URLSearchParams(window.location.search);
+    this.employeeId = urlParams.get("id");
+    console.log("Form initialized with employeeId:", this.employeeId);
+    console.log("Current URL:", window.location.href);
+    console.log("Current search params:", window.location.search);
+
+    if (this.employeeId) {
+      console.log("Loading employee with ID:", this.employeeId);
+      this.loadEmployee();
+    }
   }
 
   disconnectedCallback() {
     super.disconnectedCallback();
-    window.removeEventListener("language-changed");
-    window.removeEventListener("vaadin-router-location-changed");
+    window.removeEventListener("language-changed", this._handleLanguageChange);
+    window.removeEventListener(
+      "vaadin-router-location-changed",
+      this._handleRouteChange
+    );
   }
 
   loadEmployee() {
