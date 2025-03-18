@@ -35,7 +35,13 @@ cd lit-ing
 npm install
 ```
 
-3. Run tests:
+3. Run the app:
+
+```bash
+npm run start
+```
+
+4. Run tests:
 
 ```bash
 npm test
