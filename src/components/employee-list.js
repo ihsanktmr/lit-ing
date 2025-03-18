@@ -263,7 +263,6 @@ class EmployeeList extends LitElement {
             ${t.toggle} (${this.viewMode})
           </button>
         </div>
-        <button @click="${() => router.go("/add")}">+ ${t.addEmployee}</button>
       </div>
 
       ${filteredEmployees.length === 0
@@ -300,7 +299,7 @@ class EmployeeList extends LitElement {
                             "Edit button clicked for employee:",
                             emp.id
                           );
-                          router.go(`/edit?id=${emp.id}`);
+                          window.location.href = `/edit?id=${emp.id}`;
                         }}"
                       >
                         ${t.edit}
