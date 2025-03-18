@@ -225,6 +225,13 @@ class EmployeeForm extends LitElement {
     e.preventDefault();
     if (!this.validateForm()) return;
 
+    const t = this.translations[this.language];
+    const confirmMessage = this.employeeId ? t.confirmUpdate : t.confirmAdd;
+
+    if (!confirm(confirmMessage)) {
+      return;
+    }
+
     if (this.employeeId) {
       console.log("Updating employee:", this.employee);
       // Edit mode
@@ -237,7 +244,8 @@ class EmployeeForm extends LitElement {
       store.addEmployee(this.employee);
     }
 
-    router.go("/");
+    // Use window.location.href for navigation to ensure a full page reload
+    window.location.href = "/";
   }
 
   translations = {
@@ -259,6 +267,8 @@ class EmployeeForm extends LitElement {
       invalidEmail: "Please enter a valid email address",
       invalidPhone: "Please enter a valid phone number",
       emailExists: "This email is already registered",
+      confirmUpdate: "Are you sure you want to update this employee record?",
+      confirmAdd: "Are you sure you want to add this new employee?",
     },
     tr: {
       addEmployee: "Yeni Çalışan Ekle",
@@ -278,6 +288,9 @@ class EmployeeForm extends LitElement {
       invalidEmail: "Geçerli bir e-posta adresi giriniz",
       invalidPhone: "Geçerli bir telefon numarası giriniz",
       emailExists: "Bu e-posta adresi zaten kayıtlı",
+      confirmUpdate:
+        "Bu çalışan kaydını güncellemek istediğinize emin misiniz?",
+      confirmAdd: "Bu yeni çalışanı eklemek istediğinize emin misiniz?",
     },
   };
 
