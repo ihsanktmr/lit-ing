@@ -39,12 +39,25 @@ const mockEmployees = [
 
 // Global state
 export const store = {
-  employees: JSON.parse(localStorage.getItem("employees")) || mockEmployees,
+  employees: [],
   language: localStorage.getItem("language") || "en",
+
+  init() {
+    // Load employees from localStorage or use mock data
+    const savedEmployees = localStorage.getItem("employees");
+    if (savedEmployees) {
+      this.employees = JSON.parse(savedEmployees);
+    } else {
+      this.employees = [...mockEmployees];
+      this.save();
+    }
+    console.log("Store initialized with employees:", this.employees);
+  },
 
   addEmployee(employee) {
     this.employees = [...this.employees, employee];
     this.save();
+    this.notifyStoreUpdate();
   },
 
   updateEmployee(updatedEmployee) {
@@ -52,15 +65,18 @@ export const store = {
       emp.id === updatedEmployee.id ? updatedEmployee : emp
     );
     this.save();
+    this.notifyStoreUpdate();
   },
 
   deleteEmployee(employeeId) {
     this.employees = this.employees.filter((emp) => emp.id !== employeeId);
     this.save();
+    this.notifyStoreUpdate();
   },
 
   save() {
     localStorage.setItem("employees", JSON.stringify(this.employees));
+    console.log("Saved employees to localStorage:", this.employees);
   },
 
   setLanguage(lang) {
@@ -92,7 +108,14 @@ export const store = {
     // Force a page reload to ensure all components are updated
     window.location.reload();
   },
+
+  notifyStoreUpdate() {
+    window.dispatchEvent(new CustomEvent("store-updated"));
+  },
 };
+
+// Initialize store immediately
+store.init();
 
 // Initialize language setting on page load
 store.loadLanguage();

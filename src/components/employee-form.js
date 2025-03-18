@@ -1,5 +1,6 @@
 import { LitElement, html, css } from "lit";
 import { store } from "../store.js";
+import { router } from "../router.js";
 
 class EmployeeForm extends LitElement {
   static properties = {
@@ -76,19 +77,24 @@ class EmployeeForm extends LitElement {
     this.employeeId = null;
   }
 
+  updateLanguage() {
+    this.language = document.documentElement.lang || store.language || "en";
+    this.requestUpdate();
+  }
+
   connectedCallback() {
     super.connectedCallback();
     this.updateLanguage();
-    document.documentElement.addEventListener(
-      "lang-change",
-      this.updateLanguage.bind(this)
-    );
 
     // Check if this is an edit mode
     const urlParams = new URLSearchParams(window.location.search);
     this.employeeId = urlParams.get("id");
+    console.log("Form initialized with employeeId:", this.employeeId);
+    console.log("Current URL:", window.location.href);
+    console.log("Current search params:", window.location.search);
 
     if (this.employeeId) {
+      console.log("Loading employee with ID:", this.employeeId);
       this.loadEmployee();
     }
 
@@ -97,20 +103,69 @@ class EmployeeForm extends LitElement {
       this.language = e.detail.language;
       this.requestUpdate();
     });
+
+    // Listen for route changes
+    window.addEventListener("vaadin-router-location-changed", (e) => {
+      console.log("Route changed:", e.detail.location);
+      const newParams = new URLSearchParams(window.location.search);
+      const newId = newParams.get("id");
+      console.log("New ID:", newId);
+      console.log("Current employeeId:", this.employeeId);
+
+      if (newId !== this.employeeId) {
+        console.log("ID changed, updating form");
+        this.employeeId = newId;
+        if (newId) {
+          console.log("Loading employee for edit mode");
+          this.loadEmployee();
+        } else {
+          console.log("Resetting form for add mode");
+          // Reset form for add mode
+          this.employee = {
+            firstName: "",
+            lastName: "",
+            dob: "",
+            employmentDate: "",
+            phone: "",
+            email: "",
+            department: "Analytics",
+            position: "Junior",
+          };
+          this.requestUpdate();
+        }
+      }
+    });
   }
 
   disconnectedCallback() {
     super.disconnectedCallback();
-    // Clean up event listener
     window.removeEventListener("language-changed");
+    window.removeEventListener("vaadin-router-location-changed");
   }
 
   loadEmployee() {
+    console.log("Loading employee from store:", this.employeeId);
+    console.log("Current store employees:", store.employees);
+    console.log("Store employees type:", typeof store.employees);
+    console.log("Store employees length:", store.employees.length);
+
     const foundEmployee = store.employees.find(
       (emp) => emp.id === this.employeeId
     );
+    console.log("Found employee:", foundEmployee);
+    console.log("Employee ID comparison:", {
+      searchId: this.employeeId,
+      foundId: foundEmployee?.id,
+      isMatch: foundEmployee?.id === this.employeeId,
+    });
+
     if (foundEmployee) {
       this.employee = { ...foundEmployee };
+      this.employee.id = this.employeeId; // Ensure the ID is set
+      console.log("Updated employee data:", this.employee);
+      this.requestUpdate();
+    } else {
+      console.log("Employee not found");
     }
   }
 
@@ -171,12 +226,18 @@ class EmployeeForm extends LitElement {
     if (!this.validateForm()) return;
 
     if (this.employeeId) {
+      console.log("Updating employee:", this.employee);
+      // Edit mode
+      this.employee.id = this.employeeId; // Ensure the ID is set
       store.updateEmployee(this.employee);
     } else {
+      console.log("Adding new employee:", this.employee);
+      // Add mode
+      this.employee.id = Date.now().toString();
       store.addEmployee(this.employee);
     }
 
-    window.location.href = "/";
+    router.go("/");
   }
 
   translations = {
@@ -222,6 +283,12 @@ class EmployeeForm extends LitElement {
 
   render() {
     const t = this.translations[this.language];
+    console.log("Rendering form with employeeId:", this.employeeId);
+    console.log(
+      "Form title:",
+      this.employeeId ? t.editEmployee : t.addEmployee
+    );
+    console.log("Current employee data:", this.employee);
 
     return html`
       <h2>${this.employeeId ? t.editEmployee : t.addEmployee}</h2>
@@ -318,7 +385,7 @@ class EmployeeForm extends LitElement {
 
         <div class="button-group">
           <button type="submit">${t.save}</button>
-          <button type="button" @click="${() => (window.location.href = "/")}">
+          <button type="button" @click="${() => window.history.back()}">
             ${t.cancel}
           </button>
         </div>

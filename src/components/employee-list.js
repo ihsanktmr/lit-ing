@@ -1,5 +1,6 @@
 import { LitElement, html, css } from "lit";
 import { store } from "../store.js";
+import { router } from "../router.js";
 
 class EmployeeList extends LitElement {
   static styles = css`
@@ -96,6 +97,15 @@ class EmployeeList extends LitElement {
   connectedCallback() {
     super.connectedCallback();
     this.updateLanguage();
+    this.employees = store.employees; // Ensure we have the latest data
+    this.requestUpdate();
+
+    // Listen for store updates
+    window.addEventListener("store-updated", () => {
+      this.employees = store.employees;
+      this.requestUpdate();
+    });
+
     window.addEventListener("language-changed", (e) => {
       this.language = e.detail.language;
       this.requestUpdate();
@@ -105,6 +115,7 @@ class EmployeeList extends LitElement {
   disconnectedCallback() {
     super.disconnectedCallback();
     window.removeEventListener("language-changed");
+    window.removeEventListener("store-updated");
   }
 
   updateLanguage() {
@@ -247,9 +258,7 @@ class EmployeeList extends LitElement {
             ${t.toggle} (${this.viewMode})
           </button>
         </div>
-        <button @click="${() => (window.location.href = "/add")}">
-          + ${t.addEmployee}
-        </button>
+        <button @click="${() => router.go("/add")}">+ ${t.addEmployee}</button>
       </div>
 
       ${filteredEmployees.length === 0
@@ -281,8 +290,13 @@ class EmployeeList extends LitElement {
                     <td>${emp.position}</td>
                     <td>
                       <button
-                        @click="${() =>
-                          (window.location.href = `/edit?id=${emp.id}`)}"
+                        @click="${() => {
+                          console.log(
+                            "Edit button clicked for employee:",
+                            emp.id
+                          );
+                          window.location.href = `/edit?id=${emp.id}`;
+                        }}"
                       >
                         ${t.edit}
                       </button>
@@ -309,8 +323,13 @@ class EmployeeList extends LitElement {
                     ${t.department}: ${emp.department}<br />
                     ${t.position}: ${emp.position}<br />
                     <button
-                      @click="${() =>
-                        (window.location.href = `/edit?id=${emp.id}`)}"
+                      @click="${() => {
+                        console.log(
+                          "Edit button clicked for employee:",
+                          emp.id
+                        );
+                        window.location.href = `/edit?id=${emp.id}`;
+                      }}"
                     >
                       ${t.edit}
                     </button>
