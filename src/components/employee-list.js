@@ -1,10 +1,11 @@
 import { LitElement, html, css } from "lit";
+import { store } from "../store.js";
 
 class EmployeeList extends LitElement {
   static styles = css`
     :host {
       display: block;
-      max-width: 800px;
+      max-width: 1200px;
       margin: auto;
       font-family: Arial, sans-serif;
     }
@@ -31,11 +32,13 @@ class EmployeeList extends LitElement {
     table {
       width: 100%;
       border-collapse: collapse;
+      margin-top: 20px;
     }
     th,
     td {
       border: 1px solid #ddd;
       padding: 8px;
+      text-align: left;
     }
     th {
       background: #f4f4f4;
@@ -58,6 +61,17 @@ class EmployeeList extends LitElement {
       margin: 2px;
       background: gray;
     }
+    .search-container {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .search-input {
+      flex: 1;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
   `;
 
   static properties = {
@@ -71,29 +85,26 @@ class EmployeeList extends LitElement {
 
   constructor() {
     super();
-    this.employees = JSON.parse(localStorage.getItem("employees")) || [];
+    this.employees = store.employees;
     this.searchQuery = "";
     this.viewMode = "table";
     this.currentPage = 1;
     this.itemsPerPage = 5;
-    this.language = document.documentElement.lang || "en";
+    this.language = store.language;
   }
 
   connectedCallback() {
     super.connectedCallback();
     this.updateLanguage();
-    document.documentElement.addEventListener(
-      "lang-change",
-      this.updateLanguage.bind(this)
-    );
+    window.addEventListener("language-changed", (e) => {
+      this.language = e.detail.language;
+      this.requestUpdate();
+    });
   }
 
   disconnectedCallback() {
-    document.documentElement.removeEventListener(
-      "lang-change",
-      this.updateLanguage.bind(this)
-    );
     super.disconnectedCallback();
+    window.removeEventListener("language-changed");
   }
 
   updateLanguage() {
@@ -107,29 +118,42 @@ class EmployeeList extends LitElement {
       toggle: "Toggle View",
       firstName: "First Name",
       lastName: "Last Name",
+      dob: "Date of Birth",
+      employmentDate: "Employment Date",
+      phone: "Phone",
+      email: "Email",
       department: "Department",
       position: "Position",
       actions: "Actions",
       edit: "Edit",
       delete: "Delete",
       confirmDelete: "Are you sure you want to delete this employee?",
+      addEmployee: "Add Employee",
+      noResults: "No employees found",
     },
     tr: {
       search: "Çalışanları ara...",
       toggle: "Görünümü Değiştir",
       firstName: "Adı",
       lastName: "Soyadı",
+      dob: "Doğum Tarihi",
+      employmentDate: "İşe Başlama Tarihi",
+      phone: "Telefon",
+      email: "E-posta",
       department: "Departman",
       position: "Pozisyon",
       actions: "İşlemler",
       edit: "Düzenle",
       delete: "Sil",
       confirmDelete: "Bu çalışanı silmek istediğinize emin misiniz?",
+      addEmployee: "Çalışan Ekle",
+      noResults: "Çalışan bulunamadı",
     },
   };
 
   handleSearch(event) {
     this.searchQuery = event.target.value.toLowerCase();
+    this.currentPage = 1; // Reset to first page when searching
   }
 
   toggleView() {
@@ -137,10 +161,11 @@ class EmployeeList extends LitElement {
   }
 
   deleteEmployee(employeeId) {
-    const t = this.translations[store.language];
-    if (!confirm(t.deleteConfirm)) return;
+    const t = this.translations[this.language];
+    if (!confirm(t.confirmDelete)) return;
 
     store.deleteEmployee(employeeId);
+    this.employees = store.employees;
     this.requestUpdate();
   }
 
@@ -187,12 +212,18 @@ class EmployeeList extends LitElement {
     return this.employees.filter(
       (emp) =>
         emp.firstName.toLowerCase().includes(this.searchQuery) ||
-        emp.lastName.toLowerCase().includes(this.searchQuery)
+        emp.lastName.toLowerCase().includes(this.searchQuery) ||
+        emp.email.toLowerCase().includes(this.searchQuery) ||
+        emp.phone.includes(this.searchQuery)
     );
   }
 
   changePage(page) {
     this.currentPage = page;
+  }
+
+  formatDate(dateString) {
+    return new Date(dateString).toLocaleDateString();
   }
 
   render() {
@@ -205,53 +236,57 @@ class EmployeeList extends LitElement {
 
     return html`
       <div class="controls">
-        <input
-          type="text"
-          @input="${this.handleSearch}"
-          placeholder="${t.search}"
-        />
-
+        <div class="search-container">
+          <input
+            type="text"
+            class="search-input"
+            @input="${this.handleSearch}"
+            placeholder="${t.search}"
+          />
+          <button class="view-toggle" @click="${this.toggleView}">
+            ${t.toggle} (${this.viewMode})
+          </button>
+        </div>
         <button @click="${() => (window.location.href = "/add")}">
-          + Add Employee
-        </button>
-
-        <button
-          @click="${() => (window.location.href = `/edit?id=${employee.id}`)}"
-        >
-          ✏️ Edit
-        </button>
-
-        <button @click="${() => this.deleteEmployee(employee.id)}">
-          🗑️ Delete
-        </button>
-
-        <button class="view-toggle" @click="${this.toggleView}">
-          ${t.toggle} (${this.viewMode})
+          + ${t.addEmployee}
         </button>
       </div>
 
-      ${this.viewMode === "table"
+      ${filteredEmployees.length === 0
+        ? html`<p>${t.noResults}</p>`
+        : this.viewMode === "table"
         ? html`
             <table>
               <tr>
                 <th>${t.firstName}</th>
                 <th>${t.lastName}</th>
+                <th>${t.dob}</th>
+                <th>${t.employmentDate}</th>
+                <th>${t.phone}</th>
+                <th>${t.email}</th>
                 <th>${t.department}</th>
                 <th>${t.position}</th>
                 <th>${t.actions}</th>
               </tr>
               ${paginatedEmployees.map(
-                (emp, index) => html`
+                (emp) => html`
                   <tr>
                     <td>${emp.firstName}</td>
                     <td>${emp.lastName}</td>
+                    <td>${this.formatDate(emp.dob)}</td>
+                    <td>${this.formatDate(emp.employmentDate)}</td>
+                    <td>${emp.phone}</td>
+                    <td>${emp.email}</td>
                     <td>${emp.department}</td>
                     <td>${emp.position}</td>
                     <td>
-                      <button @click="${() => this.editEmployee(index)}">
+                      <button
+                        @click="${() =>
+                          (window.location.href = `/edit?id=${emp.id}`)}"
+                      >
                         ${t.edit}
                       </button>
-                      <button @click="${() => this.deleteEmployee(index)}">
+                      <button @click="${() => this.deleteEmployee(emp.id)}">
                         ${t.delete}
                       </button>
                     </td>
@@ -263,15 +298,23 @@ class EmployeeList extends LitElement {
         : html`
             <ul class="list-view">
               ${paginatedEmployees.map(
-                (emp, index) => html`
+                (emp) => html`
                   <li>
                     <strong>${emp.firstName} ${emp.lastName}</strong><br />
+                    ${t.dob}: ${this.formatDate(emp.dob)}<br />
+                    ${t.employmentDate}:
+                    ${this.formatDate(emp.employmentDate)}<br />
+                    ${t.phone}: ${emp.phone}<br />
+                    ${t.email}: ${emp.email}<br />
                     ${t.department}: ${emp.department}<br />
                     ${t.position}: ${emp.position}<br />
-                    <button @click="${() => this.editEmployee(index)}">
+                    <button
+                      @click="${() =>
+                        (window.location.href = `/edit?id=${emp.id}`)}"
+                    >
                       ${t.edit}
                     </button>
-                    <button @click="${() => this.deleteEmployee(index)}">
+                    <button @click="${() => this.deleteEmployee(emp.id)}">
                       ${t.delete}
                     </button>
                   </li>
@@ -279,19 +322,22 @@ class EmployeeList extends LitElement {
               )}
             </ul>
           `}
-
-      <div class="pagination">
-        ${Array.from({ length: totalPages }, (_, i) => i + 1).map(
-          (page) => html`
-            <button
-              @click="${() => this.changePage(page)}"
-              ?disabled="${this.currentPage === page}"
-            >
-              ${page}
-            </button>
+      ${totalPages > 1
+        ? html`
+            <div class="pagination">
+              ${Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                (page) => html`
+                  <button
+                    @click="${() => this.changePage(page)}"
+                    ?disabled="${this.currentPage === page}"
+                  >
+                    ${page}
+                  </button>
+                `
+              )}
+            </div>
           `
-        )}
-      </div>
+        : ""}
     `;
   }
 }

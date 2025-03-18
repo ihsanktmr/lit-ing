@@ -1,4 +1,5 @@
 import { LitElement, html, css } from "lit";
+import { store } from "../store.js";
 
 class NavBar extends LitElement {
   static styles = css`
@@ -27,12 +28,17 @@ class NavBar extends LitElement {
       text-decoration: underline;
     }
 
-    select {
+    select, button {
       margin-left: 1rem;
       padding: 0.2rem;
       border-radius: 5px;
       border: none;
       cursor: pointer;
+    }
+
+    button {
+      background: #ff4444;
+      color: white;
     }
 
     /* Mobile Styles */
@@ -50,36 +56,31 @@ class NavBar extends LitElement {
         margin: 0.5rem 0;
       }
 
-      select {
+      select, button {
         margin-top: 0.5rem;
       }
     }
   `;
 
+  static properties = {
+    language: { type: String },
+  };
+
   constructor() {
     super();
-    this.language = "en"; // Default language
-    this.initializeStore();
+    this.language = store.language;
   }
 
-  async initializeStore() {
-    try {
-      const { store } = await import("../store.js");
-      this.language = store.language;
-      this.requestUpdate();
-    } catch (error) {
-      console.error("Error loading store:", error);
-    }
+  changeLanguage(event) {
+    const newLang = event.target.value;
+    console.log("Changing language to:", newLang);
+    store.setLanguage(newLang);
+    this.language = newLang;
   }
 
-  async changeLanguage(event) {
-    try {
-      const { store } = await import("../store.js");
-      store.setLanguage(event.target.value);
-      this.language = store.language;
-      this.requestUpdate();
-    } catch (error) {
-      console.error("Error changing language:", error);
+  resetData() {
+    if (confirm("Are you sure you want to reset all data to initial state?")) {
+      store.reset();
     }
   }
 
@@ -96,10 +97,11 @@ class NavBar extends LitElement {
               ? "➕ Çalışan Ekle"
               : "➕ Add Employee"}</a
           >
-          <select @change="${this.changeLanguage}">
+          <select @change="${this.changeLanguage}" .value="${this.language}">
             <option value="en">English</option>
             <option value="tr">Türkçe</option>
           </select>
+          <button @click="${this.resetData}">Reset Data</button>
         </div>
       </nav>
     `;
